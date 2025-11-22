@@ -712,9 +712,3 @@ The implementation demonstrates understanding of:
 - Session management and HttpSession API
 - MVC pattern in authentication context
 - Security best practices for web applications
-
-**Next Steps (Part B - Homework)**:
-- Implement authentication filter for protected pages
-- Add admin authorization filter
-- Update student list with role-based UI
-- Optional: Change password feature
