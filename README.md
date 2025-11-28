@@ -1,98 +1,87 @@
-# Student Management System - Setup Instructions
+# Student Management System - Lab 6
 
-## Prerequisites
+## Quick Setup
 
-1. **JDK 8 or higher** (required for compilation) ⚠️ **CURRENTLY MISSING**
-   - **You have JRE but need JDK!** See [SETUP_GUIDE.md](SETUP_GUIDE.md) for detailed installation instructions
-   - Quick install: Download from https://adoptium.net/ (Temurin 8 or 11)
-   - Make sure `JAVA_HOME` is set to your JDK installation (not JRE)
-   - Verify with: `javac -version` (this command will fail if you only have JRE)
+### 1. Prerequisites
+- JDK 8+ (not JRE)
+- MySQL Database
+- Maven
 
-2. **MySQL Database** (currently not detected)
-   - **Option A: Install MySQL Server**
-     - Download: https://dev.mysql.com/downloads/mysql/
-     - Or use MySQL Installer for Windows: https://dev.mysql.com/downloads/installer/
-     - During installation, remember the root password you set
-   - **Option B: Use XAMPP/WAMP** (easier for development)
-     - XAMPP: https://www.apachefriends.org/ (includes MySQL)
-     - WAMP: https://www.wampserver.com/ (includes MySQL)
-   - After installation, add MySQL to PATH or use full path to mysql.exe
-
-3. **Maven** (already installed ✓)
-
-## Setup Steps
-
-### 1. Set up the Database
-
-**If MySQL is in your PATH:**
+### 2. Database Setup
 ```bash
-# Connect to MySQL and run:
 mysql -u root -p < database_setup.sql
-
-# Or manually:
-mysql -u root -p
-# Then copy and paste the contents of database_setup.sql
 ```
 
-**If using XAMPP:**
+Or use MySQL Workbench to run `database_setup.sql`
+
+### 3. Configure Database (if needed)
+If your MySQL password is not empty, edit database credentials in:
+- `src/main/java/com/student/dao/StudentDAO.java`
+- `src/main/java/com/student/dao/UserDAO.java`
+
+Default settings: username=`root`, password=`""` (empty)
+
+### 4. Run Application
 ```bash
-# Use full path:
-C:\xampp\mysql\bin\mysql.exe -u root -p < database_setup.sql
-```
-
-**If using MySQL installed separately:**
-```bash
-# Find MySQL installation (usually in Program Files):
-"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p < database_setup.sql
-```
-
-**Alternative: Use MySQL Workbench or phpMyAdmin**
-- Open MySQL Workbench or phpMyAdmin
-- Connect to your MySQL server
-- Open and execute the `database_setup.sql` file
-
-### 2. Configure Database Connection
-
-Edit `src/main/java/com/student/dao/StudentDAO.java` and update the database credentials if needed:
-- `JDBC_USER`: Default is "root"
-- `JDBC_PASSWORD`: Update with your MySQL password (currently empty)
-
-### 3. Build and Run
-
-**Option 1: Using Jetty Maven Plugin (Recommended)**
-```bash
-# Build the project
 mvn clean package
-
-# Run with Jetty (supports Jakarta EE)
 mvn jetty:run
 ```
 
-**Option 2: Deploy to External Tomcat Server**
-```bash
-# Build the WAR file
-mvn clean package
+Access at: **http://localhost:8080**
 
-# Copy the WAR file to Tomcat webapps directory
-# Copy: target/student-management-mvc.war
-# To: [TOMCAT_HOME]/webapps/
-# Then start Tomcat server
+---
+
+## Features
+
+### Authentication & Session Management
+- ✅ User login/logout
+- ✅ BCrypt password hashing
+- ✅ Session management (30-minute timeout)
+- ✅ Role-based access control
+
+### Filters (Homework)
+- ✅ **AuthFilter**: Protects all pages, requires login
+- ✅ **AdminFilter**: Restricts admin actions to admin users
+- ✅ **Role-Based UI**: Shows/hides buttons based on user role
+
+---
+
+## Test Credentials
+
+**Admin** (full access):
+- Username: `admin`
+- Password: `password123`
+
+**Regular User** (view only):
+- Username: `john`
+- Password: `password123`
+
+---
+
+## Project Structure
+```
+src/main/java/com/student/
+├── controller/          # Servlets
+├── dao/                 # Database access
+├── model/               # Java beans
+├── filter/              # Auth & Admin filters (NEW)
+└── util/                # Utilities
+
+src/main/webapp/views/   # JSP pages
 ```
 
-**Option 3: Using IDE (Eclipse/IntelliJ)**
-1. Import as Maven project
-2. Add Tomcat 10+ server (for Jakarta EE support)
-3. Deploy the project
-4. Run on server
+---
 
-The application will be available at: **http://localhost:8080**
+## Documentation
 
-## Alternative: Using an IDE
+**Detailed Report**: See `report.md` for complete implementation details and explanations.
 
-If you have Eclipse or IntelliJ IDEA:
-1. Import as Maven project
-2. Configure Tomcat server
-3. Deploy and run
+---
 
+## Lab Completion
 
-
+- ✅ In-class exercises (60 pts)
+- ✅ Homework exercises (40 pts)
+  - Exercise 5: AuthFilter (12 pts)
+  - Exercise 6: AdminFilter (10 pts)
+  - Exercise 7: Role-Based UI (10 pts)

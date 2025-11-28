@@ -8,12 +8,59 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            padding: 0;
             background-color: #f5f5f5;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .navbar h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .navbar-right a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        .navbar-right a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .role-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .role-badge.role-admin {
+            background-color: #ff6b6b;
+        }
+        .role-badge.role-user {
+            background-color: #4ecdc4;
         }
         .container {
             max-width: 1200px;
-            margin: 0 auto;
+            margin: 20px auto;
             background-color: white;
             padding: 20px;
             border-radius: 8px;
@@ -24,21 +71,21 @@
             border-bottom: 3px solid #4CAF50;
             padding-bottom: 10px;
         }
-        .success {
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid;
+        }
+        .alert-success {
             background-color: #d4edda;
             color: #155724;
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            border: 1px solid #c3e6cb;
+            border-color: #c3e6cb;
         }
-        .error {
+        .alert-error {
             background-color: #f8d7da;
             color: #721c24;
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            border: 1px solid #f5c6cb;
+            border-color: #f5c6cb;
         }
         .btn {
             display: inline-block;
@@ -153,21 +200,38 @@
     </style>
 </head>
 <body>
+    <!-- Navigation Bar -->
+    <div class="navbar">
+        <h2>📚 Student Management System</h2>
+        <div class="navbar-right">
+            <div class="user-info">
+                <span>Welcome, ${sessionScope.fullName}</span>
+                <span class="role-badge role-${sessionScope.role}">
+                    ${sessionScope.role}
+                </span>
+            </div>
+            <a href="dashboard">Dashboard</a>
+            <a href="logout">Logout</a>
+        </div>
+    </div>
+
     <div class="container">
-        <h1>📚 Student Management (MVC)</h1>
+        <h1>📚 Student List</h1>
 
         <!-- Display success message -->
         <c:if test="${not empty param.message}">
-            <div class="success">${param.message}</div>
+            <div class="alert alert-success">✅ ${param.message}</div>
         </c:if>
 
         <!-- Display error message -->
         <c:if test="${not empty param.error}">
-            <div class="error">${param.error}</div>
+            <div class="alert alert-error">❌ ${param.error}</div>
         </c:if>
 
-        <!-- Add new student button -->
-        <a href="student?action=new" class="btn">➕ Add New Student</a>
+        <!-- Add new student button - Admin only -->
+        <c:if test="${sessionScope.role eq 'admin'}">
+            <a href="student?action=new" class="btn">➕ Add New Student</a>
+        </c:if>
 
         <div class="controls">
             <div class="search-box">
@@ -249,7 +313,9 @@
                             </c:if>
                         </a>
                     </th>
-                    <th>Actions</th>
+                    <c:if test="${sessionScope.role eq 'admin'}">
+                        <th>Actions</th>
+                    </c:if>
                 </tr>
             </thead>
             <tbody>
@@ -262,18 +328,25 @@
                                 <td>${student.fullName}</td>
                                 <td>${student.email}</td>
                                 <td>${student.major}</td>
-                                <td class="actions">
-                                    <a href="student?action=edit&id=${student.id}" class="btn btn-edit">✏️ Edit</a>
-                                    <a href="student?action=delete&id=${student.id}" 
-                                       class="btn btn-delete" 
-                                       onclick="return confirm('Are you sure you want to delete this student?')">🗑️ Delete</a>
-                                </td>
+                                <c:if test="${sessionScope.role eq 'admin'}">
+                                    <td class="actions">
+                                        <a href="student?action=edit&id=${student.id}" class="btn btn-edit">✏️ Edit</a>
+                                        <a href="student?action=delete&id=${student.id}" 
+                                           class="btn btn-delete" 
+                                           onclick="return confirm('Are you sure you want to delete this student?')">🗑️ Delete</a>
+                                    </td>
+                                </c:if>
                             </tr>
                         </c:forEach>
                     </c:when>
                     <c:otherwise>
                         <tr>
-                            <td colspan="6" class="empty-message">No students found. Click "Add New Student" to get started.</td>
+                            <td colspan="${sessionScope.role eq 'admin' ? '6' : '5'}" class="empty-message">
+                                No students found. 
+                                <c:if test="${sessionScope.role eq 'admin'}">
+                                    Click "Add New Student" to get started.
+                                </c:if>
+                            </td>
                         </tr>
                     </c:otherwise>
                 </c:choose>

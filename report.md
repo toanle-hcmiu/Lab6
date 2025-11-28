@@ -63,7 +63,7 @@ This project implements **Authentication and Session Management** for the Studen
 **What**: Created a `users` table in MySQL database to store user credentials and information.
 
 **How**:
-- Created SQL script: `database/users_table.sql`
+- Created SQL script in `database_setup.sql` (merged with students table)
 - Defined table structure with columns:
   - `id`: Primary key, auto-increment
   - `username`: Unique, not null
@@ -668,47 +668,247 @@ Welcome, ${sessionScope.fullName}
 - ✅ Active user check (is_active flag)
 - ✅ Error messages don't reveal if username exists
 
+## HOMEWORK EXERCISES
+
+### Exercise 5: Authentication Filter (12 points)
+
+**What**: Created `AuthFilter.java` to protect all pages and require authentication.
+
+**How**:
+- **Filter Configuration**: Uses `@WebFilter(urlPatterns = {"/*"})` to intercept all requests
+- **Public URLs**: Allows access to login, logout, and static resources without authentication
+- **Session Check**: Verifies user is logged in by checking session attribute
+- **Redirect**: Sends unauthenticated users to login page
+
+**Code**:
+```java
+@WebFilter(filterName = "AuthFilter", urlPatterns = {"/*"})
+public class AuthFilter implements Filter {
+    private static final String[] PUBLIC_URLS = {
+        "/login", "/logout", ".css", ".js", ".png", ".jpg"
+    };
+    
+    public void doFilter(...) {
+        // Check if URL is public
+        if (isPublicUrl(path)) {
+            chain.doFilter(request, response);
+            return;
+        }
+        
+        // Check if user is logged in
+        HttpSession session = httpRequest.getSession(false);
+        boolean isLoggedIn = (session != null && session.getAttribute("user") != null);
+        
+        if (isLoggedIn) {
+            chain.doFilter(request, response);
+        } else {
+            httpResponse.sendRedirect(contextPath + "/login");
+        }
+    }
+}
+```
+
+**Why**:
+- Single point of authentication enforcement
+- No need to check login on every page manually
+- Protects entire application automatically
+- Easy to maintain public URLs list
+
+---
+
+### Exercise 6: Admin Authorization Filter (10 points)
+
+**What**: Created `AdminFilter.java` to restrict admin actions (create, edit, delete) to admin users only.
+
+**How**:
+- **Filter Configuration**: Uses `@WebFilter(urlPatterns = {"/student"})` to intercept student controller
+- **Admin Actions**: Defines list of actions requiring admin role: new, insert, edit, update, delete
+- **Role Check**: Gets user from session and checks if `user.isAdmin()` returns true
+- **Access Denied**: Redirects non-admin users with error message
+
+**Code**:
+```java
+@WebFilter(filterName = "AdminFilter", urlPatterns = {"/student"})
+public class AdminFilter implements Filter {
+    private static final String[] ADMIN_ACTIONS = {
+        "new", "insert", "edit", "update", "delete"
+    };
+    
+    public void doFilter(...) {
+        String action = httpRequest.getParameter("action");
+        
+        if (isAdminAction(action)) {
+            User user = (User) session.getAttribute("user");
+            
+            if (user != null && user.isAdmin()) {
+                chain.doFilter(request, response); // Allow
+            } else {
+                // Deny - redirect with error
+                httpResponse.sendRedirect(
+                    contextPath + "/student?action=list&error=" +
+                    "You do not have permission to perform this action."
+                );
+            }
+        } else {
+            chain.doFilter(request, response); // Allow non-admin actions
+        }
+    }
+}
+```
+
+**Why**:
+- Enforces role-based access control at server level
+- Prevents URL manipulation attacks (users typing admin URLs)
+- Centralized authorization logic
+- Clear error messages for denied access
+
+---
+
+### Exercise 7: Role-Based UI (10 points)
+
+**What**: Updated `student-list.jsp` to show/hide UI elements based on user role.
+
+**How**:
+- **Navigation Bar**: Added navbar with user info, role badge, and logout link
+- **Role Badge**: Displays "admin" or "user" with different colors
+- **Conditional Buttons**: 
+  - "Add New Student" button only visible to admin
+  - Edit/Delete buttons in table only visible to admin
+  - Actions column header only shown for admin
+- **Error Messages**: Display authorization errors from AdminFilter
+
+**JSP Code**:
+```jsp
+<!-- Navigation Bar -->
+<div class="navbar">
+    <h2>📚 Student Management System</h2>
+    <div class="navbar-right">
+        <span>Welcome, ${sessionScope.fullName}</span>
+        <span class="role-badge role-${sessionScope.role}">
+            ${sessionScope.role}
+        </span>
+        <a href="dashboard">Dashboard</a>
+        <a href="logout">Logout</a>
+    </div>
+</div>
+
+<!-- Add Button - Admin Only -->
+<c:if test="${sessionScope.role eq 'admin'}">
+    <a href="student?action=new" class="btn">➕ Add New Student</a>
+</c:if>
+
+<!-- Table Header -->
+<c:if test="${sessionScope.role eq 'admin'}">
+    <th>Actions</th>
+</c:if>
+
+<!-- Table Row -->
+<c:if test="${sessionScope.role eq 'admin'}">
+    <td class="actions">
+        <a href="student?action=edit&id=${student.id}">✏️ Edit</a>
+        <a href="student?action=delete&id=${student.id}">🗑️ Delete</a>
+    </td>
+</c:if>
+```
+
+**Why**:
+- Improves user experience by hiding irrelevant options
+- Provides visual feedback about user's role
+- Prevents confusion (users won't click blocked actions)
+- Professional UI with consistent design
+
+---
+
+## Security Implementation Summary
+
+### Authentication & Authorization Flow
+
+**1. User Login** → **2. AuthFilter Checks** → **3. AdminFilter Checks** → **4. UI Adapts**
+
+**Security Layers**:
+- ✅ **Layer 1**: BCrypt password hashing (database)
+- ✅ **Layer 2**: Session management (login/logout)
+- ✅ **Layer 3**: AuthFilter (authentication for all pages)
+- ✅ **Layer 4**: AdminFilter (authorization for admin actions)
+- ✅ **Layer 5**: Role-based UI (conditional elements)
+
+**Defense in Depth**: Multiple security layers ensure robust protection
+
+---
+
+## Testing Results
+
+### Authentication Tests:
+- ✅ Access `/student` without login → Redirects to login
+- ✅ Login with valid credentials → Access granted
+- ✅ Login with invalid credentials → Error message shown
+- ✅ Logout → Session cleared, redirects to login
+- ✅ Static files (CSS/JS) → Accessible without login
+
+### Authorization Tests:
+- ✅ Admin user → Can add/edit/delete students
+- ✅ Regular user → Can only view students
+- ✅ Regular user tries admin URL → Blocked with error
+- ✅ Direct URL manipulation → AdminFilter blocks access
+
+### UI Tests:
+- ✅ Admin sees "Add Student" button
+- ✅ Regular user doesn't see "Add Student" button
+- ✅ Admin sees Edit/Delete buttons in table
+- ✅ Regular user doesn't see Edit/Delete buttons
+- ✅ Role badge displays correctly for both roles
+
+---
+
 ## Key Learning Outcomes
 
-1. **Authentication Understanding**: 
-   - How to verify user credentials
-   - Password hashing and verification
-   - Session creation and management
+### 1. Servlet Filters
+- How filters intercept requests before reaching servlets
+- Filter ordering and URL pattern matching
+- Using filters for cross-cutting concerns
 
-2. **Session Management**:
-   - HttpSession API usage
-   - Session attributes storage
-   - Session timeout configuration
-   - Session invalidation
+### 2. Authentication vs Authorization
+- **Authentication**: Who are you? (Login verification)
+- **Authorization**: What can you do? (Role-based permissions)
 
-3. **Security Best Practices**:
-   - BCrypt password hashing
-   - Session fixation prevention
-   - Input validation
-   - SQL injection prevention
+### 3. Defense in Depth
+- Multiple security layers protect application
+- Server-side validation is mandatory
+- UI hiding is for UX, not security
 
-4. **MVC Pattern Application**:
-   - Controller handles authentication logic
-   - DAO handles database operations
-   - View displays login/dashboard interfaces
+### 4. Role-Based Access Control (RBAC)
+- Users have roles (admin/user)
+- Roles have permissions
+- Actions are restricted by role
 
-5. **Role-Based Access**:
-   - User roles stored in database
-   - Role checking in controllers
-   - Conditional UI elements based on role
+---
 
 ## Conclusion
 
-This lab successfully implements authentication and session management for the Student Management System. The application now:
+This lab successfully implements complete authentication and authorization for the Student Management System:
 
-- ✅ Securely authenticates users with BCrypt password hashing
-- ✅ Manages user sessions with proper timeout and invalidation
-- ✅ Provides role-based access control (admin/user)
-- ✅ Offers professional login and dashboard interfaces
-- ✅ Follows security best practices
+### Completed Features:
+- ✅ User authentication with BCrypt hashing
+- ✅ Session management with timeout
+- ✅ Authentication filter protecting all pages
+- ✅ Admin authorization filter for CRUD operations
+- ✅ Role-based UI with conditional elements
+- ✅ Professional navigation and error handling
 
-The implementation demonstrates understanding of:
-- Authentication concepts and password security
-- Session management and HttpSession API
-- MVC pattern in authentication context
-- Security best practices for web applications
+### Security Best Practices Applied:
+- ✅ Password hashing (BCrypt)
+- ✅ Session fixation prevention
+- ✅ SQL injection prevention (PreparedStatement)
+- ✅ Input validation (server-side)
+- ✅ Multiple security layers (defense in depth)
+- ✅ Role-based access control
+- ✅ URL manipulation protection
+
+### What Was Learned:
+- Implementing servlet filters for authentication/authorization
+- Creating role-based access control systems
+- Building secure web applications with multiple security layers
+- Using JSTL for conditional UI rendering
+- Following security best practices in Java web development
+
+**Project Status**: All in-class exercises (60 pts) and homework exercises (40 pts) completed successfully!
